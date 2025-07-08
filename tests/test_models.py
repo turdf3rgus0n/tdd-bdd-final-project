@@ -27,7 +27,7 @@ import os
 import logging
 import unittest
 from decimal import Decimal
-from service.models import Product, Category, db
+from service.models import Product, Category, db, DataValidationError
 from service import app
 from tests.factories import ProductFactory
 
@@ -288,3 +288,77 @@ class TestProductModel(unittest.TestCase):
         # the expected category, to ensure that all the retrieved products have the correct category.
         for product in products_by_category:
             self.assertEqual(product.category, category)
+
+    def test_find_by_price(self):
+        """It should Find Products by Price"""
+        products = ProductFactory.create_batch(10)
+
+        # set a few elements with the same price
+        price = 42.0
+        products[0].price = price
+        products[2].price = price
+        products[6].price = price
+
+        # Use a for loop to iterate over the products list and call the create() method on each product to
+        # save them to the database.
+        for product in products:
+            product.create()
+
+        # Use a list comprehension to filter the products based on their price and then use len()
+        # to calculate the length of the filtered list, and use the variable called count to hold the
+        # number of products that have the specified price.
+        count = len([product for product in products if product.price == price])
+
+        # Call the find_by_price() method on the Product class to retrieve products from the database that
+        # have the specified price.
+        products_by_price = Product.find_by_price(str(price))
+
+        # Assert if the count of the found products matches the expected count.
+        self.assertEqual(products_by_price.count(), count)
+
+        # Use a for loop to iterate over the found products and assert that each product's price matches
+        # the expected price, to ensure that all the retrieved products have the correct price.
+        for product in products_by_price:
+            self.assertEqual(product.price, price)
+
+    # Sad path tests for complete coverage
+
+    def test_update_with_empty_id(self):
+        """It should not Update a Product without an id"""
+        product = ProductFactory()
+
+        # Set the ID of the product object to None and then call the create() method on the product.
+        product.id = None
+        product.create()
+
+        # Assert that the ID of the product object is not None after calling the create() method.
+        self.assertIsNotNone(product.id)
+
+        # Update the product in the system with the new property values using the update() method.
+        product.description = "testing"
+        product.id = None
+
+        # Assert that a DataValidationError is raised as a result of the id set to None
+        self.assertRaises(DataValidationError, product.update)
+
+    def test_deserialize(self):
+        """It should not deserialize a Product with an improper input dictionary"""
+        product = ProductFactory()
+
+        # Assert that a DataValidationError is raises when an empty dictionary is
+        # passed in for deserialization
+        self.assertRaises(DataValidationError, product.deserialize, {})
+
+        # load dictionary with values from the product factory
+        product_dict = product.serialize()
+
+        # set the available key to an invalid type
+        product_dict["available"] = "Not Valid"
+
+        # Assert that a DataValidationError is raised when a dictionary with an invalid
+        # available type is passed in for deserialization
+        self.assertRaises(DataValidationError, product.deserialize, product_dict)
+
+        # Assert that a DataValidationError is raised when a String is passed in instead
+        # of an input dictionary
+        self.assertRaises(DataValidationError, product.deserialize, "Test")
