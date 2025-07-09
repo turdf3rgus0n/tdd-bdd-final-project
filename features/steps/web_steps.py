@@ -105,6 +105,38 @@ def step_impl(context, element_name):
 ##################################################################
 
 ## UPDATE CODE HERE ##
+@when('I press the "{element_name}" button')
+def step_impl(context, element_name):
+    element_id = element_name.lower().replace(' ', '_') + "-btn"
+    element = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.presence_of_element_located((By.ID, element_id))
+    )
+    element.click()
+
+@then('I should see the message "{text_string}"')
+def step_impl(context, text_string):
+    found = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.text_to_be_present_in_element(
+            (By.ID, 'flash_message'),
+            text_string
+        )
+    )
+    assert(found)
+
+@then(u'I should see "{text_string}" in the results')
+def step_impl(context, text_string):
+    found = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.text_to_be_present_in_element(
+            (By.ID, 'search_results'),
+            text_string
+        )
+    )
+    assert(found)
+
+@then(u'I should not see "{text_string}" in the results')
+def step_impl(context, text_string):
+    element = context.driver.find_element_by_id('search_results')
+    assert(text_string not in element.text)
 
 ##################################################################
 # This code works because of the following naming convention:
